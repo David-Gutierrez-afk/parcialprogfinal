@@ -1,0 +1,16 @@
+# Dependencias y archivos bloqueados de Composer (prohibidos en el repositorio)
+**/vendor/
+vendor/
+**/composer.lock
+composer.lock
+
+# Variables de entorno locales
+**/.env
+.env
+
+# Archivos del sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
