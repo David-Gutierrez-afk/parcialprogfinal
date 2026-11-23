@@ -41,13 +41,23 @@ class EmpleadoRepository
     public function index(Request $request, Response $response): Response
     {
         try {
-            $empleados = $this->service->list();
+            $queryParams = $request->getQueryParams();
+            $filters = $this->validator->validateFilters($queryParams);
+            $empleados = $this->service->list($filters);
 
             return $this->responder->success($response, [
-                'data'  => $empleados->toArray(),
-                'total' => $empleados->count(),
+                'data'    => $empleados->toArray(),
+                'total'   => $empleados->count(),
+                'filtros' => $filters,
             ], 200);
-        } catch (Throwable $ex) {
+        } catch (ValidationException $validationException) {
+            return $this->responder->error(
+                $response,
+                $validationException->getMessage(),
+                422,
+                $validationException->getErrors()
+            );
+        } catch (Throwable $unexpectedError) {
             return $this->responder->error($response, 'Error interno al consultar los empleados.', 500);
         }
     }
@@ -64,11 +74,16 @@ class EmpleadoRepository
             return $this->responder->success($response, [
                 'data' => $empleado->toArray(),
             ], 200);
-        } catch (ValidationException $ex) {
-            return $this->responder->error($response, $ex->getMessage(), 422, $ex->getErrors());
-        } catch (NotFoundException $ex) {
-            return $this->responder->error($response, $ex->getMessage(), 404);
-        } catch (Throwable $ex) {
+        } catch (ValidationException $validationException) {
+            return $this->responder->error(
+                $response,
+                $validationException->getMessage(),
+                422,
+                $validationException->getErrors()
+            );
+        } catch (NotFoundException $notFoundException) {
+            return $this->responder->error($response, $notFoundException->getMessage(), 404);
+        } catch (Throwable $unexpectedError) {
             return $this->responder->error($response, 'Error interno al consultar el empleado.', 500);
         }
     }
@@ -84,12 +99,79 @@ class EmpleadoRepository
                 'mensaje' => 'Empleado registrado correctamente.',
                 'data'    => $empleado->toArray(),
             ], 201);
-        } catch (ValidationException $ex) {
-            return $this->responder->error($response, $ex->getMessage(), 422, $ex->getErrors());
-        } catch (ConflictException $ex) {
-            return $this->responder->error($response, $ex->getMessage(), 409);
-        } catch (Throwable $ex) {
+        } catch (ValidationException $validationException) {
+            return $this->responder->error(
+                $response,
+                $validationException->getMessage(),
+                422,
+                $validationException->getErrors()
+            );
+        } catch (ConflictException $conflictException) {
+            return $this->responder->error($response, $conflictException->getMessage(), 409);
+        } catch (Throwable $unexpectedError) {
             return $this->responder->error($response, 'Error interno al registrar el empleado.', 500);
+        }
+    }
+
+    /**
+     * @param array<string, string> $args
+     */
+    public function update(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = $this->parseId($args['id'] ?? '');
+            $payload = $this->parseJsonBody($request);
+            $validated = $this->validator->validateUpdate($payload);
+            $empleado = $this->service->update($id, $validated);
+
+            return $this->responder->success($response, [
+                'mensaje' => 'Empleado actualizado correctamente.',
+                'data'    => $empleado->toArray(),
+            ], 200);
+        } catch (ValidationException $validationException) {
+            return $this->responder->error(
+                $response,
+                $validationException->getMessage(),
+                422,
+                $validationException->getErrors()
+            );
+        } catch (NotFoundException $notFoundException) {
+            return $this->responder->error($response, $notFoundException->getMessage(), 404);
+        } catch (ConflictException $conflictException) {
+            return $this->responder->error($response, $conflictException->getMessage(), 409);
+        } catch (Throwable $unexpectedError) {
+            return $this->responder->error($response, 'Error interno al actualizar el empleado.', 500);
+        }
+    }
+
+    /**
+     * @param array<string, string> $args
+     */
+    public function changeStatus(Request $request, Response $response, array $args): Response
+    {
+        try {
+            $id = $this->parseId($args['id'] ?? '');
+            $payload = $this->parseJsonBody($request);
+            $nuevoEstado = $this->validator->validateStatusChange($payload);
+            $empleado = $this->service->changeStatus($id, $nuevoEstado);
+
+            return $this->responder->success($response, [
+                'mensaje' => sprintf('Estado del empleado actualizado a %s.', $nuevoEstado),
+                'data'    => $empleado->toArray(),
+            ], 200);
+        } catch (ValidationException $validationException) {
+            return $this->responder->error(
+                $response,
+                $validationException->getMessage(),
+                422,
+                $validationException->getErrors()
+            );
+        } catch (NotFoundException $notFoundException) {
+            return $this->responder->error($response, $notFoundException->getMessage(), 404);
+        } catch (ConflictException $conflictException) {
+            return $this->responder->error($response, $conflictException->getMessage(), 409);
+        } catch (Throwable $unexpectedError) {
+            return $this->responder->error($response, 'Error interno al cambiar el estado del empleado.', 500);
         }
     }
 

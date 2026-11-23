@@ -9,7 +9,10 @@ use Illuminate\Database\Eloquent\Collection;
 
 interface EmpleadoServiceInterface
 {
-    public function list(): Collection;
+    /**
+     * @param array<string, string> $filters
+     */
+    public function list(array $filters = []): Collection;
 
     public function findById(int $id): Empleado;
 
@@ -17,4 +20,11 @@ interface EmpleadoServiceInterface
      * @param array<string, mixed> $data
      */
     public function create(array $data): Empleado;
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function update(int $id, array $data): Empleado;
+
+    public function changeStatus(int $id, string $estado): Empleado;
 }
