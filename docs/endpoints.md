@@ -290,4 +290,138 @@ Authorization: Bearer <token>
 
 ---
 
-*(Este documento se seguirá ampliando con los endpoints de `ms-incapacidades` y `ms-seguimiento` en los siguientes avances.)*
+## 3. Microservicio `ms-incapacidades`
+- **URL Base:** `http://127.0.0.1:8003`
+- **Base de Datos:** `db_incapacidades` (tabla `incapacidades`)
+- **Responsabilidad:** Registro, consulta filtrada, edición, cálculo automático de días, control de solapamientos y finalización de incapacidades médicas.
+
+### `GET /health`
+- **Protección:** Pública
+- **Por qué se usa:** Comprueba de manera independiente que el microservicio de incapacidades está disponible.
+- **Respuesta (`200 OK`):**
+```json
+{
+  "ok": true,
+  "servicio": "ms-incapacidades",
+  "estado": "activo"
+}
+```
+
+### `GET /incapacidades`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Query Params opcionales:** `empleado_id`, `fecha` (incapacidades vigentes en esa fecha), `fecha_inicio`, `fecha_fin`, `estado`, `tipo`
+- **Ejemplo con filtros:** `GET /incapacidades?empleado_id=1&estado=aprobada&tipo=enfermedad_general`
+- **Por qué se usa:** Permite consultar el listado general y aplicar múltiples criterios de búsqueda combinables (por empleado, fecha, estado o tipo) usando *query params* REST sobre un único endpoint de colección.
+- **Respuesta exitosa (`200 OK`):**
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": 1,
+      "empleado_id": 1,
+      "fecha_inicio": "2026-06-01",
+      "fecha_fin": "2026-06-05",
+      "tipo": "enfermedad_general",
+      "diagnostico_general": "Infeccion respiratoria",
+      "entidad_medica": "Clinica Central",
+      "observaciones": "Reposo medico durante cinco dias",
+      "dias_incapacidad": 5,
+      "estado": "aprobada"
+    }
+  ],
+  "total": 1,
+  "filtros": {
+    "empleado_id": 1,
+    "estado": "aprobada",
+    "tipo": "enfermedad_general"
+  }
+}
+```
+- **Errores posibles:** `401` (no autenticado), `422` (filtros con formato o valores inválidos).
+
+### `GET /incapacidades/{id}`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Recupera el detalle de una incapacidad específica por ID para edición o consulta previa al registro de seguimiento.
+- **Errores posibles:** `401` (no autenticado), `404` (incapacidad no encontrada), `422` (ID inválido).
+
+### `POST /incapacidades`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Crea una nueva incapacidad validando todas las reglas de negocio: existencia y estado `activo` del empleado en `db_empleados`, validez de fechas (`fecha_fin >= fecha_inicio`), ausencia de solapamiento con otras incapacidades no rechazadas del mismo empleado y **cálculo automático inclusivo de `dias_incapacidad`** (`(fecha_fin - fecha_inicio) + 1`).
+- **Body JSON:**
+```json
+{
+  "empleado_id": 1,
+  "fecha_inicio": "2026-07-01",
+  "fecha_fin": "2026-07-04",
+  "tipo": "enfermedad_general",
+  "diagnostico_general": "Cuadro gripal agudo",
+  "entidad_medica": "Clinica Central",
+  "observaciones": "Incapacidad expedida por medico general"
+}
+```
+- **Respuesta exitosa (`201 Created`):**
+```json
+{
+  "ok": true,
+  "mensaje": "Incapacidad médica registrada correctamente.",
+  "data": {
+    "id": 3,
+    "empleado_id": 1,
+    "fecha_inicio": "2026-07-01",
+    "fecha_fin": "2026-07-04",
+    "tipo": "enfermedad_general",
+    "diagnostico_general": "Cuadro gripal agudo",
+    "entidad_medica": "Clinica Central",
+    "observaciones": "Incapacidad expedida por medico general",
+    "dias_incapacidad": 4,
+    "estado": "registrada"
+  }
+}
+```
+- **Errores posibles:** `401` (no autenticado), `404` (empleado no existe), `409` (empleado inactivo o rango de fechas solapado), `422` (fechas/campos inválidos).
+
+### `PUT /incapacidades/{id}`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Permite modificar fechas, observaciones, estado u otros datos editables de una incapacidad vigente. Recalcula automáticamente `dias_incapacidad` al cambiar fechas, vuelve a verificar no solapamiento excluyendo el propio registro e impide modificar incapacidades ya `finalizadas`.
+- **Body JSON:**
+```json
+{
+  "fecha_inicio": "2026-07-01",
+  "fecha_fin": "2026-07-06",
+  "observaciones": "Prorroga autorizada por medico tratante",
+  "estado": "en_revision"
+}
+```
+- **Errores posibles:** `401`, `404`, `409` (ya finalizada o solapamiento de fechas), `422`.
+
+### `PATCH /incapacidades/{id}/finalizar`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Representa una acción de cierre administrativo puntual (cambio parcial de estado a `finalizada`) sin necesidad de reenviar todos los campos. Impide finalizar incapacidades ya finalizadas o rechazadas (`409 Conflict`).
+- **Respuesta exitosa (`200 OK`):**
+```json
+{
+  "ok": true,
+  "mensaje": "Incapacidad médica marcada como finalizada.",
+  "data": {
+    "id": 3,
+    "estado": "finalizada"
+  }
+}
+```
+- **Errores posibles:** `401`, `404`, `409` (ya finalizada o rechazada), `422`.
+
+### `PATCH /incapacidades/{id}/estado`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Permite actualizar únicamente el estado de la incapacidad (`registrada`, `en_revision`, `aprobada`, `rechazada`, `finalizada`) desde el flujo de control administrativo y seguimiento, bloqueando modificaciones sobre incapacidades ya finalizadas o transiciones redundantes.
+- **Body JSON:**
+```json
+{
+  "estado": "aprobada"
+}
+```
+- **Errores posibles:** `401`, `404`, `409` (ya finalizada, mismo estado actual o solapamiento al reactivar rechazada), `422`.
+
+---
+
+*(Este documento se completará con los endpoints de `ms-seguimiento` en el siguiente avance.)*
