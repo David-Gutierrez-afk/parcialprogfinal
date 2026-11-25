@@ -424,4 +424,157 @@ Authorization: Bearer <token>
 
 ---
 
-*(Este documento se completará con los endpoints de `ms-seguimiento` en el siguiente avance.)*
+## 4. Microservicio `ms-seguimiento`
+- **URL Base:** `http://127.0.0.1:8004`
+- **Base de Datos:** `db_seguimiento` (tabla `seguimientos`)
+- **Responsabilidad:** Control administrativo, registro de observaciones, trazabilidad histórica de cambios de estado y actualización de estados de incapacidades.
+
+### `GET /health`
+- **Protección:** Pública
+- **Por qué se usa:** Permite comprobar que el microservicio de seguimiento se encuentra operativo de manera independiente.
+- **Respuesta (`200 OK`):**
+```json
+{
+  "ok": true,
+  "servicio": "ms-seguimiento",
+  "estado": "activo"
+}
+```
+
+### `GET /seguimientos`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Query Params opcionales:** `incapacidad_id`, `estado`, `usuario_responsable`, `fecha`, `fecha_inicio`, `fecha_fin`
+- **Ejemplo con filtros:** `GET /seguimientos?incapacidad_id=1&estado=aprobada`
+- **Por qué se usa:** Centraliza la consulta general de auditoría y seguimiento administrativo con filtros combinables sobre una sola colección REST, ordenados del más reciente al más antiguo.
+- **Respuesta exitosa (`200 OK`):**
+```json
+{
+  "ok": true,
+  "data": [
+    {
+      "id": 2,
+      "incapacidad_id": 1,
+      "fecha": "2026-06-02",
+      "comentario": "Incapacidad aprobada por gestion humana",
+      "estado": "aprobada",
+      "usuario_responsable": "admin"
+    }
+  ],
+  "total": 1,
+  "filtros": {
+    "incapacidad_id": 1,
+    "estado": "aprobada"
+  }
+}
+```
+- **Errores posibles:** `401` (no autenticado), `422` (filtros con formato o valores inválidos).
+
+### `GET /seguimientos/incapacidad/{incapacidad_id}`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Expone un subrecurso semántico específico para consultar la **línea de tiempo cronológica completa** (observaciones y cambios de estado ordenados desde el primer registro hasta el más reciente) de una incapacidad puntual, devolviendo además el resumen del estado actual de la incapacidad.
+- **Respuesta exitosa (`200 OK`):**
+```json
+{
+  "ok": true,
+  "incapacidad": {
+    "id": 1,
+    "empleado_id": 1,
+    "fecha_inicio": "2026-06-01",
+    "fecha_fin": "2026-06-05",
+    "dias_incapacidad": 5,
+    "estado": "aprobada"
+  },
+  "historial": [
+    {
+      "id": 1,
+      "incapacidad_id": 1,
+      "fecha": "2026-06-01",
+      "comentario": "Incapacidad registrada correctamente",
+      "estado": "registrada",
+      "usuario_responsable": "gestionhumana"
+    },
+    {
+      "id": 2,
+      "incapacidad_id": 1,
+      "fecha": "2026-06-02",
+      "comentario": "Incapacidad aprobada por gestion humana",
+      "estado": "aprobada",
+      "usuario_responsable": "admin"
+    }
+  ],
+  "total": 2
+}
+```
+- **Errores posibles:** `401`, `404` (la incapacidad no existe), `422` (ID inválido).
+
+### `GET /seguimientos/{id}`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Permite inspeccionar un movimiento de seguimiento específico por su identificador único.
+- **Errores posibles:** `401`, `404`, `422`.
+
+### `POST /seguimientos`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Registra una nueva entrada de seguimiento administrativo validando que el comentario no esté vacío (mínimo 3 caracteres), que la incapacidad exista y no esté `finalizada`, y que el `usuario_responsable` exista y esté `activo` en `db_auth` (si se omite, toma automáticamente el usuario autenticado). Además sincroniza el estado en `db_incapacidades` cuando hay cambio de estado para garantizar consistencia entre historial y estado vigente.
+- **Body JSON:**
+```json
+{
+  "incapacidad_id": 2,
+  "fecha": "2026-06-09",
+  "comentario": "Soportes medicos validados satisfactoriamente",
+  "estado": "aprobada",
+  "usuario_responsable": "admin"
+}
+```
+- **Respuesta exitosa (`201 Created`):**
+```json
+{
+  "ok": true,
+  "mensaje": "Seguimiento registrado correctamente.",
+  "data": {
+    "id": 4,
+    "incapacidad_id": 2,
+    "fecha": "2026-06-09",
+    "comentario": "Soportes medicos validados satisfactoriamente",
+    "estado": "aprobada",
+    "usuario_responsable": "admin"
+  },
+  "incapacidad": {
+    "id": 2,
+    "estado": "aprobada"
+  },
+  "estado_anterior": "en_revision"
+}
+```
+- **Errores posibles:** `401`, `404` (incapacidad o usuario responsable inexistente), `409` (incapacidad ya finalizada o transición inválida `rechazada -> finalizada`), `422` (comentario vacío o fecha/estado inválido).
+
+### `PATCH /seguimientos/incapacidad/{incapacidad_id}/estado`
+- **Protección:** Token obligatorio (`AuthMiddleware`)
+- **Por qué se usa:** Se utiliza `PATCH` sobre el recurso de estado de la incapacidad porque representa una transición controlada de estado con trazabilidad obligatoria: exige un comentario justificativo, impide transiciones redundantes hacia el mismo estado actual (`409 Conflict`), bloquea cambios sobre incapacidades ya `finalizadas`, actualiza el estado en `db_incapacidades` y deja automáticamente el registro de auditoría en `db_seguimiento`.
+- **Body JSON:**
+```json
+{
+  "estado": "finalizada",
+  "comentario": "Periodo de reposo culminado y cierre administrativo completado"
+}
+```
+- **Respuesta exitosa (`200 OK`):**
+```json
+{
+  "ok": true,
+  "mensaje": "Estado actualizado a finalizada y registrado en el historial.",
+  "data": {
+    "id": 5,
+    "incapacidad_id": 2,
+    "fecha": "2026-11-25",
+    "comentario": "Periodo de reposo culminado y cierre administrativo completado",
+    "estado": "finalizada",
+    "usuario_responsable": "admin"
+  },
+  "incapacidad": {
+    "id": 2,
+    "estado": "finalizada"
+  },
+  "estado_anterior": "aprobada"
+}
+```
+- **Errores posibles:** `401`, `404` (incapacidad o usuario responsable inexistente), `409` (ya finalizada, mismo estado actual o transición `rechazada -> finalizada`), `422` (estado o comentario inválido).
