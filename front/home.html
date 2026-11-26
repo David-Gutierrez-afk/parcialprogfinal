@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo — Gestión de Incapacidades Médicas</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-brand">
+            <h1>Corporate Solutions</h1>
+            <p>Sistema Web de Gestión de Incapacidades Médicas</p>
+        </div>
+
+        <div class="header-session">
+            <div class="session-user-info">
+                <span id="sessionUserName" class="session-user-name">Cargando...</span>
+                <span id="sessionUserRole" class="session-user-role"></span>
+            </div>
+            <button type="button" id="logoutButton" class="button button-outline-light">
+                Cerrar sesión
+            </button>
+        </div>
+    </header>
+
+    <nav class="app-nav" aria-label="Módulos del sistema">
+        <button type="button" class="nav-tab is-active" data-module-tab="empleados">
+            Empleados
+        </button>
+        <button type="button" class="nav-tab" data-module-tab="incapacidades">
+            Incapacidades Médicas
+        </button>
+        <button type="button" class="nav-tab" data-module-tab="seguimiento">
+            Seguimiento y Trazabilidad
+        </button>
+    </nav>
+
+    <main class="app-main">
+        <div id="globalAlert" class="alert is-hidden" role="alert"></div>
+
+        <!-- ==================== MODULO EMPLEADOS ==================== -->
+        <section id="module-empleados" class="module-section" data-module-section="empleados">
+            <header class="module-header">
+                <div>
+                    <h2>Gestión de Empleados</h2>
+                    <p>Registre, edite, consulte y administre el estado laboral del personal.</p>
+                </div>
+                <div class="module-actions">
+                    <button type="button" id="refreshEmpleadosButton" class="button button-secondary">
+                        Actualizar lista
+                    </button>
+                    <button type="button" id="openCreateEmpleadoButton" class="button button-primary">
+                        Registrar empleado
+                    </button>
+                </div>
+            </header>
+
+            <div class="kpi-grid">
+                <article class="kpi-card">
+                    <span class="kpi-label">Total mostrados</span>
+                    <strong id="kpiEmpleadosTotal" class="kpi-value">0</strong>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-label">Empleados activos</span>
+                    <strong id="kpiEmpleadosActivos" class="kpi-value">0</strong>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-label">Empleados inactivos</span>
+                    <strong id="kpiEmpleadosInactivos" class="kpi-value">0</strong>
+                </article>
+            </div>
+
+            <article class="panel-card">
+                <h3 class="panel-title">Filtros de búsqueda</h3>
+                <form id="empleadosFilterForm" name="empleadosFilterForm" class="form-grid" novalidate>
+                    <div class="form-group">
+                        <label for="filtroDocumento">Documento</label>
+                        <input
+                            type="text"
+                            id="filtroDocumento"
+                            name="documento"
+                            placeholder="Ej. 1000123456"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroArea">Área</label>
+                        <input
+                            type="text"
+                            id="filtroArea"
+                            name="area"
+                            placeholder="Ej. Tecnologia"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroEstadoEmpleado">Estado</label>
+                        <select id="filtroEstadoEmpleado" name="estado">
+                            <option value="">Todos los estados</option>
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="button button-primary">Buscar</button>
+                        <button type="button" id="clearEmpleadosFiltersButton" class="button button-secondary">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <h3 class="panel-title">Listado de empleados</h3>
+                <div class="table-wrapper">
+                    <table id="empleadosTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre completo</th>
+                                <th>Documento</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Cargo</th>
+                                <th>Área</th>
+                                <th>Ingreso</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="empleadosTableBody">
+                            <tr>
+                                <td colspan="10" class="table-empty-cell">Cargando empleados...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+        </section>
+
+        <!-- ==================== MODULO INCAPACIDADES ==================== -->
+        <section id="module-incapacidades" class="module-section is-hidden" data-module-section="incapacidades">
+            <header class="module-header">
+                <div>
+                    <h2>Incapacidades Médicas</h2>
+                    <p>Registro, control de días, filtros y finalización de incapacidades.</p>
+                </div>
+            </header>
+            <article class="panel-card placeholder-notice">
+                <p>Módulo de Incapacidades preparado para integración en la siguiente etapa.</p>
+            </article>
+        </section>
+
+        <!-- ==================== MODULO SEGUIMIENTO ==================== -->
+        <section id="module-seguimiento" class="module-section is-hidden" data-module-section="seguimiento">
+            <header class="module-header">
+                <div>
+                    <h2>Seguimiento y Trazabilidad</h2>
+                    <p>Control administrativo, observaciones e historial completo de estados.</p>
+                </div>
+            </header>
+            <article class="panel-card placeholder-notice">
+                <p>Módulo de Seguimiento preparado para integración en la siguiente etapa.</p>
+            </article>
+        </section>
+    </main>
+
+    <!-- ==================== MODAL CREAR / EDITAR EMPLEADO ==================== -->
+    <div id="empleadoModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="empleadoModalTitle">
+            <header class="modal-header">
+                <h3 id="empleadoModalTitle">Registrar empleado</h3>
+                <button type="button" id="closeEmpleadoModalButton" class="modal-close-button" aria-label="Cerrar">
+                    &times;
+                </button>
+            </header>
+
+            <div id="empleadoModalAlert" class="alert is-hidden" role="alert"></div>
+
+            <form id="empleadoForm" name="empleadoForm" novalidate>
+                <input type="hidden" id="empleadoId" name="id">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="empleadoNombres">Nombres *</label>
+                        <input type="text" id="empleadoNombres" name="nombres" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoApellidos">Apellidos *</label>
+                        <input type="text" id="empleadoApellidos" name="apellidos" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoDocumento">Documento *</label>
+                        <input type="text" id="empleadoDocumento" name="documento" maxlength="30" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoCorreo">Correo electrónico *</label>
+                        <input type="email" id="empleadoCorreo" name="correo" maxlength="150" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoTelefono">Teléfono *</label>
+                        <input type="text" id="empleadoTelefono" name="telefono" maxlength="30" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoCargo">Cargo *</label>
+                        <input type="text" id="empleadoCargo" name="cargo" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoArea">Área *</label>
+                        <input type="text" id="empleadoArea" name="area" maxlength="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleadoFechaIngreso">Fecha de ingreso *</label>
+                        <input type="date" id="empleadoFechaIngreso" name="fecha_ingreso" required>
+                    </div>
+
+                    <div id="empleadoEstadoGroup" class="form-group is-hidden">
+                        <label for="empleadoEstado">Estado</label>
+                        <select id="empleadoEstado" name="estado">
+                            <option value="activo">Activo</option>
+                            <option value="inactivo">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancelEmpleadoModalButton" class="button button-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="saveEmpleadoButton" class="button button-primary">
+                        Guardar empleado
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL CONFIRMACION CAMBIO DE ESTADO ==================== -->
+    <div id="estadoEmpleadoModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-compact" role="dialog" aria-modal="true" aria-labelledby="estadoEmpleadoTitle">
+            <header class="modal-header">
+                <h3 id="estadoEmpleadoTitle">Confirmar cambio de estado</h3>
+                <button type="button" id="closeEstadoEmpleadoModalButton" class="modal-close-button" aria-label="Cerrar">
+                    &times;
+                </button>
+            </header>
+
+            <p id="estadoEmpleadoConfirmMessage"></p>
+
+            <footer class="modal-footer">
+                <button type="button" id="cancelEstadoEmpleadoButton" class="button button-secondary">
+                    Cancelar
+                </button>
+                <button type="button" id="confirmEstadoEmpleadoButton" class="button button-warning">
+                    Confirmar
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
