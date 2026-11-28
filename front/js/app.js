@@ -1,6 +1,8 @@
 import { API_URLS, ROL_LABELS } from "./config.js";
 import { createEmpleadosModule } from "./empleados.js";
 import { HttpClient } from "./httpClient.js";
+import { createIncapacidadesModule } from "./incapacidades.js";
+import { createSeguimientoModule } from "./seguimiento.js";
 import { SessionManager } from "./session.js";
 import { clearAlert, showAlert } from "./uiFeedback.js";
 
@@ -74,6 +76,13 @@ async function initializeApplication() {
     }
 
     const empleadosModule = createEmpleadosModule(globalAlert);
+    const seguimientoModule = createSeguimientoModule(globalAlert);
+    const incapacidadesModule = createIncapacidadesModule(globalAlert, {
+        onOpenSeguimiento: (incapacidadId) => {
+            activateModuleTab("seguimiento");
+            seguimientoModule.openForIncapacidad(incapacidadId);
+        },
+    });
 
     navigationTabs.forEach((tabElement) => {
         tabElement.addEventListener("click", () => {
@@ -82,6 +91,10 @@ async function initializeApplication() {
 
             if (selectedModule === "empleados") {
                 empleadosModule.load();
+            } else if (selectedModule === "incapacidades") {
+                incapacidadesModule.load();
+            } else if (selectedModule === "seguimiento") {
+                seguimientoModule.load();
             }
         });
     });

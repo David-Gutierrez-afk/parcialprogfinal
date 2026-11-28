@@ -142,11 +142,105 @@
             <header class="module-header">
                 <div>
                     <h2>Incapacidades Médicas</h2>
-                    <p>Registro, control de días, filtros y finalización de incapacidades.</p>
+                    <p>Registro, cálculo automático de días, control de estados y finalización administrativa.</p>
+                </div>
+                <div class="module-actions">
+                    <button type="button" id="refreshIncapacidadesButton" class="button button-secondary">
+                        Actualizar lista
+                    </button>
+                    <button type="button" id="openCreateIncapacidadButton" class="button button-primary">
+                        Registrar incapacidad
+                    </button>
                 </div>
             </header>
-            <article class="panel-card placeholder-notice">
-                <p>Módulo de Incapacidades preparado para integración en la siguiente etapa.</p>
+
+            <div class="kpi-grid">
+                <article class="kpi-card">
+                    <span class="kpi-label">Total mostradas</span>
+                    <strong id="kpiIncapacidadesTotal" class="kpi-value">0</strong>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-label">En revisión</span>
+                    <strong id="kpiIncapacidadesRevision" class="kpi-value">0</strong>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-label">Aprobadas</span>
+                    <strong id="kpiIncapacidadesAprobadas" class="kpi-value">0</strong>
+                </article>
+                <article class="kpi-card">
+                    <span class="kpi-label">Finalizadas</span>
+                    <strong id="kpiIncapacidadesFinalizadas" class="kpi-value">0</strong>
+                </article>
+            </div>
+
+            <article class="panel-card">
+                <h3 class="panel-title">Filtros de búsqueda</h3>
+                <form id="incapacidadesFilterForm" name="incapacidadesFilterForm" class="form-grid" novalidate>
+                    <div class="form-group">
+                        <label for="filtroIncapacidadEmpleado">Empleado</label>
+                        <select id="filtroIncapacidadEmpleado" name="empleado_id">
+                            <option value="">Todos los empleados</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroIncapacidadFecha">Vigente en fecha</label>
+                        <input type="date" id="filtroIncapacidadFecha" name="fecha">
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroIncapacidadEstado">Estado</label>
+                        <select id="filtroIncapacidadEstado" name="estado">
+                            <option value="">Todos los estados</option>
+                            <option value="registrada">Registrada</option>
+                            <option value="en_revision">En revisión</option>
+                            <option value="aprobada">Aprobada</option>
+                            <option value="rechazada">Rechazada</option>
+                            <option value="finalizada">Finalizada</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroIncapacidadTipo">Tipo</label>
+                        <select id="filtroIncapacidadTipo" name="tipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="enfermedad_general">Enfermedad general</option>
+                            <option value="accidente_laboral">Accidente laboral</option>
+                            <option value="licencia_medica">Licencia médica</option>
+                            <option value="incapacidad_temporal">Incapacidad temporal</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="button button-primary">Buscar</button>
+                        <button type="button" id="clearIncapacidadesFiltersButton" class="button button-secondary">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+            </article>
+
+            <article class="panel-card">
+                <h3 class="panel-title">Listado de incapacidades</h3>
+                <div class="table-wrapper">
+                    <table id="incapacidadesTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Empleado</th>
+                                <th>Tipo</th>
+                                <th>Fecha inicio</th>
+                                <th>Fecha fin</th>
+                                <th>Días</th>
+                                <th>Diagnóstico</th>
+                                <th>Entidad médica</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incapacidadesTableBody">
+                            <tr>
+                                <td colspan="10" class="table-empty-cell">Cargando incapacidades...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </article>
         </section>
 
@@ -155,11 +249,165 @@
             <header class="module-header">
                 <div>
                     <h2>Seguimiento y Trazabilidad</h2>
-                    <p>Control administrativo, observaciones e historial completo de estados.</p>
+                    <p>Registre observaciones administrativas, actualice estados y consulte el historial completo.</p>
+                </div>
+                <div class="module-actions">
+                    <button type="button" id="refreshSeguimientoButton" class="button button-secondary">
+                        Actualizar datos
+                    </button>
                 </div>
             </header>
-            <article class="panel-card placeholder-notice">
-                <p>Módulo de Seguimiento preparado para integración en la siguiente etapa.</p>
+
+            <div class="seguimiento-layout">
+                <article class="panel-card">
+                    <h3 class="panel-title">Registrar seguimiento o cambio de estado</h3>
+                    <div id="seguimientoFormAlert" class="alert is-hidden" role="alert"></div>
+
+                    <form id="seguimientoForm" name="seguimientoForm" novalidate>
+                        <div class="form-group">
+                            <label for="seguimientoIncapacidadId">Incapacidad asociada *</label>
+                            <select id="seguimientoIncapacidadId" name="incapacidad_id" required>
+                                <option value="">Seleccione una incapacidad...</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="seguimientoAccion">Tipo de operación *</label>
+                            <select id="seguimientoAccion" name="accion">
+                                <option value="registrar">Registrar seguimiento administrativo</option>
+                                <option value="actualizar_estado">Actualizar estado con trazabilidad</option>
+                            </select>
+                            <span class="field-hint">
+                                Ambas operaciones sincronizan el estado de la incapacidad y guardan trazabilidad en el historial.
+                            </span>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="seguimientoFecha">Fecha *</label>
+                                <input type="date" id="seguimientoFecha" name="fecha" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="seguimientoEstado">Estado actualizado *</label>
+                                <select id="seguimientoEstado" name="estado" required>
+                                    <option value="">Seleccione un estado...</option>
+                                    <option value="registrada">Registrada</option>
+                                    <option value="en_revision">En revisión</option>
+                                    <option value="aprobada">Aprobada</option>
+                                    <option value="rechazada">Rechazada</option>
+                                    <option value="finalizada">Finalizada</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="seguimientoUsuarioResponsable">Usuario responsable *</label>
+                            <input
+                                type="text"
+                                id="seguimientoUsuarioResponsable"
+                                name="usuario_responsable"
+                                maxlength="100"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="seguimientoComentario">Comentario / Observación *</label>
+                            <textarea
+                                id="seguimientoComentario"
+                                name="comentario"
+                                maxlength="2000"
+                                placeholder="Describa la validación, soporte médico o motivo del cambio de estado..."
+                                required
+                            ></textarea>
+                        </div>
+
+                        <button type="submit" id="saveSeguimientoButton" class="button button-primary button-block">
+                            Guardar seguimiento
+                        </button>
+                    </form>
+                </article>
+
+                <article class="panel-card">
+                    <h3 class="panel-title">Historial cronológico por incapacidad</h3>
+                    <div class="form-group">
+                        <label for="historialIncapacidadSelect">Consultar historial de incapacidad</label>
+                        <select id="historialIncapacidadSelect" name="historial_incapacidad_id">
+                            <option value="">Seleccione una incapacidad para ver su historial...</option>
+                        </select>
+                    </div>
+
+                    <div id="historialResumenIncapacidad" class="detail-summary-grid is-hidden"></div>
+
+                    <ul id="seguimientoTimelineList" class="timeline-list">
+                        <li class="timeline-empty">
+                            Seleccione una incapacidad para visualizar su historial de cambios y observaciones.
+                        </li>
+                    </ul>
+                </article>
+            </div>
+
+            <article class="panel-card">
+                <h3 class="panel-title">Registro general de seguimientos</h3>
+                <form id="seguimientosFilterForm" name="seguimientosFilterForm" class="form-grid" novalidate>
+                    <div class="form-group">
+                        <label for="filtroSeguimientoIncapacidad">Incapacidad</label>
+                        <select id="filtroSeguimientoIncapacidad" name="incapacidad_id">
+                            <option value="">Todas las incapacidades</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroSeguimientoEstado">Estado</label>
+                        <select id="filtroSeguimientoEstado" name="estado">
+                            <option value="">Todos los estados</option>
+                            <option value="registrada">Registrada</option>
+                            <option value="en_revision">En revisión</option>
+                            <option value="aprobada">Aprobada</option>
+                            <option value="rechazada">Rechazada</option>
+                            <option value="finalizada">Finalizada</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroSeguimientoUsuario">Usuario responsable</label>
+                        <input
+                            type="text"
+                            id="filtroSeguimientoUsuario"
+                            name="usuario_responsable"
+                            placeholder="Ej. admin o gestionhumana"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroSeguimientoFecha">Fecha</label>
+                        <input type="date" id="filtroSeguimientoFecha" name="fecha">
+                    </div>
+                    <div class="filter-actions">
+                        <button type="submit" class="button button-primary">Filtrar</button>
+                        <button type="button" id="clearSeguimientosFiltersButton" class="button button-secondary">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
+
+                <div class="table-wrapper">
+                    <table id="seguimientosTable" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Incapacidad</th>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Usuario responsable</th>
+                                <th>Comentario</th>
+                            </tr>
+                        </thead>
+                        <tbody id="seguimientosTableBody">
+                            <tr>
+                                <td colspan="6" class="table-empty-cell">Cargando seguimientos...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </article>
         </section>
     </main>
@@ -259,6 +507,135 @@
                 </button>
                 <button type="button" id="confirmEstadoEmpleadoButton" class="button button-warning">
                     Confirmar
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL CREAR / EDITAR INCAPACIDAD ==================== -->
+    <div id="incapacidadModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="incapacidadModalTitle">
+            <header class="modal-header">
+                <h3 id="incapacidadModalTitle">Registrar incapacidad médica</h3>
+                <button type="button" id="closeIncapacidadModalButton" class="modal-close-button" aria-label="Cerrar">
+                    &times;
+                </button>
+            </header>
+
+            <div id="incapacidadModalAlert" class="alert is-hidden" role="alert"></div>
+
+            <form id="incapacidadForm" name="incapacidadForm" novalidate>
+                <input type="hidden" id="incapacidadId" name="id">
+
+                <div class="form-grid">
+                    <div class="form-group form-group-full">
+                        <label for="incapacidadEmpleadoId">Empleado *</label>
+                        <select id="incapacidadEmpleadoId" name="empleado_id" required>
+                            <option value="">Seleccione un empleado...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="incapacidadFechaInicio">Fecha de inicio *</label>
+                        <input type="date" id="incapacidadFechaInicio" name="fecha_inicio" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="incapacidadFechaFin">Fecha fin *</label>
+                        <input type="date" id="incapacidadFechaFin" name="fecha_fin" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="incapacidadTipo">Tipo de incapacidad *</label>
+                        <select id="incapacidadTipo" name="tipo" required>
+                            <option value="">Seleccione un tipo...</option>
+                            <option value="enfermedad_general">Enfermedad general</option>
+                            <option value="accidente_laboral">Accidente laboral</option>
+                            <option value="licencia_medica">Licencia médica</option>
+                            <option value="incapacidad_temporal">Incapacidad temporal</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="incapacidadEntidadMedica">Entidad médica *</label>
+                        <input
+                            type="text"
+                            id="incapacidadEntidadMedica"
+                            name="entidad_medica"
+                            maxlength="150"
+                            placeholder="Ej. Clínica Central"
+                            required
+                        >
+                    </div>
+
+                    <div id="incapacidadEstadoGroup" class="form-group form-group-full is-hidden">
+                        <label for="incapacidadEstado">Estado</label>
+                        <select id="incapacidadEstado" name="estado">
+                            <option value="registrada">Registrada</option>
+                            <option value="en_revision">En revisión</option>
+                            <option value="aprobada">Aprobada</option>
+                            <option value="rechazada">Rechazada</option>
+                            <option value="finalizada">Finalizada</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group form-group-full">
+                        <label for="incapacidadDiagnostico">Diagnóstico general *</label>
+                        <textarea
+                            id="incapacidadDiagnostico"
+                            name="diagnostico_general"
+                            maxlength="2000"
+                            placeholder="Ingrese el diagnóstico médico general..."
+                            required
+                        ></textarea>
+                    </div>
+
+                    <div class="form-group form-group-full">
+                        <label for="incapacidadObservaciones">Observaciones</label>
+                        <textarea
+                            id="incapacidadObservaciones"
+                            name="observaciones"
+                            maxlength="2000"
+                            placeholder="Observaciones adicionales (opcional)..."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="days-preview-box">
+                    <span>Total estimado de días de incapacidad:</span>
+                    <strong id="incapacidadDiasPreview" class="days-preview-value">0 días</strong>
+                </div>
+
+                <footer class="modal-footer">
+                    <button type="button" id="cancelIncapacidadModalButton" class="button button-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="saveIncapacidadButton" class="button button-primary">
+                        Registrar incapacidad
+                    </button>
+                </footer>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL CONFIRMACION FINALIZAR INCAPACIDAD ==================== -->
+    <div id="finalizarIncapacidadModal" class="modal-backdrop" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-compact" role="dialog" aria-modal="true" aria-labelledby="finalizarIncapacidadTitle">
+            <header class="modal-header">
+                <h3 id="finalizarIncapacidadTitle">Finalizar incapacidad médica</h3>
+                <button type="button" id="closeFinalizarIncapacidadButton" class="modal-close-button" aria-label="Cerrar">
+                    &times;
+                </button>
+            </header>
+
+            <p id="finalizarIncapacidadConfirmMessage"></p>
+
+            <footer class="modal-footer">
+                <button type="button" id="cancelFinalizarIncapacidadButton" class="button button-secondary">
+                    Cancelar
+                </button>
+                <button type="button" id="confirmFinalizarIncapacidadButton" class="button button-warning">
+                    Finalizar incapacidad
                 </button>
             </footer>
         </div>
